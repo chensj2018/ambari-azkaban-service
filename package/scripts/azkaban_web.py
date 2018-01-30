@@ -14,50 +14,40 @@
 
 import os.path as path
 
-from common import AZKABAN_DB_URL, AZKABAN_WEB_URL, AZKABAN_NAME, AZKABAN_HOME, AZKABAN_CONF, AZKABAN_SQL
+from common import AZKABAN_NAME, AZKABAN_WEB_HOME, AZKABAN_WEB_CONF, AZKABAN_SQL
 from resource_management.core.exceptions import ExecutionFailed, ComponentIsNotRunning
 from resource_management.core.resources.system import Execute
 from resource_management.libraries.script.script import Script
-
+import MySQLdb
 
 class WebServer(Script):
     def install(self, env):
         from params import java_home, azkaban_db
-        Execute('wget --no-check-certificate {0}  -O /tmp/{1}'.format(AZKABAN_WEB_URL, AZKABAN_NAME))
-        Execute('wget --no-check-certificate {0}  -O /tmp/{1}'.format(AZKABAN_DB_URL, AZKABAN_SQL))
-        Execute(
-            'mysql -h{0} -P{1} -D{2} -u{3} -p{4} < {5}'.format(
-                azkaban_db['mysql.host'],
-                azkaban_db['mysql.port'],
-                azkaban_db['mysql.database'],
-                azkaban_db['mysql.user'],
-                azkaban_db['mysql.password'],
-                '/tmp/{0}'.format(AZKABAN_SQL),
-            )
-        )
-        Execute(
-            'mkdir -p {0} {1} {2} || echo "whatever"'.format(
-                AZKABAN_HOME + '/conf',
-                AZKABAN_HOME + '/extlib',
-                AZKABAN_HOME + '/plugins/jobtypes',
-            )
-        )
-        Execute('echo execute.as.user=false > {0} '.format(AZKABAN_HOME + '/plugins/jobtypes/commonprivate.properties'))
-        Execute(
-            'export JAVA_HOME={0} && tar -xf /tmp/{1} -C {2} --strip-components 1'.format(
-                java_home,
-                AZKABAN_NAME,
-                AZKABAN_HOME
-            )
-        )
+        import params
+        env.set_params(params)
+        self.install_packages(env)        
+        #Execute(
+        #    'mysql -h{0} -P{1} -D{2} -u{3} -p{4} < {5}'.format(
+        #        azkaban_db['mysql.host'],
+        #        azkaban_db['mysql.port'],
+        #        azkaban_db['mysql.database'],
+        #        azkaban_db['mysql.user'],
+        #        azkaban_db['mysql.password'],
+        #        AZKABAN_SQL,
+        #    )
+        #)
+        Execute('echo execute.as.user=false > {0} '.format(AZKABAN_WEB_HOME + '/plugins/jobtypes/commonprivate.properties'))
         self.configure(env)
 
     def stop(self, env):
-        Execute('cd {0} && bin/azkaban-web-shutdown.sh'.format(AZKABAN_HOME))
+        Execute('cd {0} && bin/azkaban-web-shutdown.sh'.format(AZKABAN_WEB_HOME))
 
     def start(self, env):
         self.configure(env)
-        Execute('cd {0} && bin/azkaban-web-start.sh'.format(AZKABAN_HOME))
+        if not self.is_init_azkaban_schema(env):
+            self.create_azkaban_schema(env)
+        
+        Execute('cd {0} && bin/azkaban-web-start.sh'.format(AZKABAN_WEB_HOME))
 
     def status(self, env):
         try:
@@ -74,7 +64,7 @@ class WebServer(Script):
         from params import azkaban_db, azkaban_web_properties, azkaban_users, global_properties, log4j_properties
         key_val_template = '{0}={1}\n'
 
-        with open(path.join(AZKABAN_CONF, 'azkaban.properties'), 'w') as f:
+        with open(path.join(AZKABAN_WEB_CONF, 'azkaban.properties'), 'w') as f:
             for key, value in azkaban_db.iteritems():
                 f.write(key_val_template.format(key, value))
             for key, value in azkaban_web_properties.iteritems():
@@ -82,15 +72,48 @@ class WebServer(Script):
                     f.write(key_val_template.format(key, value))
             f.write(azkaban_web_properties['content'])
 
-        with open(path.join(AZKABAN_CONF, 'azkaban-users.xml'), 'w') as f:
+        with open(path.join(AZKABAN_WEB_CONF, 'azkaban-users.xml'), 'w') as f:
             f.write(str(azkaban_users['content']))
 
-        with open(path.join(AZKABAN_CONF, 'global.properties'), 'w') as f:
+        with open(path.join(AZKABAN_WEB_CONF, 'global.properties'), 'w') as f:
             f.write(global_properties['content'])
 
-        with open(path.join(AZKABAN_CONF, 'log4j.properties'), 'w') as f:
+        with open(path.join(AZKABAN_WEB_CONF, 'log4j.properties'), 'w') as f:
             f.write(log4j_properties['content'])
-
-
+    
+    def create_azkaban_schema(self, env):
+        from params import azkaban_db
+        Execute(
+            'mysql -h{0} -P{1} -D{2} -u{3} -p{4} < {5}'.format(
+                azkaban_db['mysql.host'],
+                azkaban_db['mysql.port'],
+                azkaban_db['mysql.database'],
+                azkaban_db['mysql.user'],
+                azkaban_db['mysql.password'],
+                AZKABAN_SQL,
+            )
+        )
+    
+    def is_init_azkaban_schema(self, env):
+        from params import azkaban_db
+        #db = MySQLdb.connect("n3.hj.gbase","azkaban","azkaban","azkaban" )
+        db = MySQLdb.connect(azkaban_db['mysql.host'],azkaban_db['mysql.user'],azkaban_db['mysql.password'],azkaban_db['mysql.database'])
+        cursor = db.cursor()
+        
+        query_sql = "SELECT count(*) FROM information_schema.tables WHERE table_schema = {0} AND table_name = executors".format(azkaban_db['mysql.database'])
+        #query_sql = "select * from azkaban.executors"
+        logger.info("query sql : {0}".format(query_sql))
+        try:
+           cursor.execute(query_sql)
+           results = cursor.fetchall()
+           print executor_status
+        except:
+           print "Error: unable to fecth data"
+        
+        db.close()
+        
+        return len(results) > 0
+    
+    
 if __name__ == '__main__':
     WebServer().execute()

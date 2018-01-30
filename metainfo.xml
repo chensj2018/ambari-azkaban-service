@@ -24,7 +24,7 @@
                 the ordering through job dependencies and provides an easy to use web user interface to maintain and
                 track your workflows.
             </comment>
-            <version>3.38.0</version>
+            <version>3.40.0</version>
             <quickLinksConfigurations>
                 <quickLinksConfiguration>
                     <fileName>quicklinks.json</fileName>
@@ -65,7 +65,16 @@
                 <config-type>azkaban-web.properties.xml</config-type>
                 <config-type>log4j.properties.xml</config-type>
             </configuration-dependencies>
-
+            <osSpecifics>
+                <osSpecific>
+                    <osFamily>any</osFamily>
+                    <packages>
+                        <package>
+                            <name>azkaban*</name>
+                        </package>
+                    </packages>
+                </osSpecific>
+           </osSpecifics>
         </service>
     </services>
 </metainfo>

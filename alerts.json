@@ -1,0 +1,20 @@
+{
+  "AZKABAN": {
+    "service": [],
+    "AZKABAN_EXECUTOR": [
+      {
+        "name": "azkaban_executor_process",
+        "label": "Azkaban Executor Interactive Process",
+        "description": "This host-level alert is triggered if the AzkabanExecutorInteractive cannot be determined to be up and responding to web requests.",
+        "interval": 1,
+        "scope": "ANY",
+        "enabled": true,
+        "source": {
+          "type": "SCRIPT",
+          "path": "HDP/2.6/services/ambari-azkaban-service-master/package/alerts/alert_azkanban_executor_status.py",
+          "parameters": []
+        }
+      }
+    ]
+  }
+}

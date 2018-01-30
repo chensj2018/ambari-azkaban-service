@@ -20,10 +20,11 @@ script_dir = os.path.dirname(os.path.realpath(__file__))
 config = ConfigParser.ConfigParser()
 config.readfp(open(os.path.join(script_dir, 'download.ini')))
 
-AZKABAN_HOME = '/usr/hdp/current/azkaban'
+VERSION = '2.6.4.0-91'
+AZKABAN_EXE_HOME = '/usr/hdp/'+VERSION+'/azkaban-exec-server'
+AZKABAN_WEB_HOME = '/usr/hdp/'+VERSION+'/azkaban-web-server'
+AZKABAN_SQL = '/usr/hdp/'+VERSION+'/azkaban-db/create-all-sql-3.40.0.sql'
+AZKABAN_EXE_CONF = AZKABAN_EXE_HOME + '/conf'
+AZKABAN_WEB_CONF = AZKABAN_WEB_HOME + '/conf'
+
 AZKABAN_NAME = 'azkaban'
-AZKABAN_SQL = 'azkaban.sql'
-AZKABAN_WEB_URL = config.get('download', 'azkaban_web_url')
-AZKABAN_EXECUTOR_URL = config.get('download', 'azkaban_executor_url')
-AZKABAN_DB_URL = config.get('download', 'azkaban_db_url')
-AZKABAN_CONF = AZKABAN_HOME + '/conf'
