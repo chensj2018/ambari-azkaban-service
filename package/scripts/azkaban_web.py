@@ -18,7 +18,7 @@ from common import AZKABAN_NAME, AZKABAN_WEB_HOME, AZKABAN_WEB_CONF, AZKABAN_SQL
 from resource_management.core.exceptions import ExecutionFailed, ComponentIsNotRunning
 from resource_management.core.resources.system import Execute
 from resource_management.libraries.script.script import Script
-import MySQLdb
+from resource_management.core.logger import Logger
 
 class WebServer(Script):
     def install(self, env):
@@ -26,21 +26,11 @@ class WebServer(Script):
         import params
         env.set_params(params)
         self.install_packages(env)        
-        #Execute(
-        #    'mysql -h{0} -P{1} -D{2} -u{3} -p{4} < {5}'.format(
-        #        azkaban_db['mysql.host'],
-        #        azkaban_db['mysql.port'],
-        #        azkaban_db['mysql.database'],
-        #        azkaban_db['mysql.user'],
-        #        azkaban_db['mysql.password'],
-        #        AZKABAN_SQL,
-        #    )
-        #)
         Execute('echo execute.as.user=false > {0} '.format(AZKABAN_WEB_HOME + '/plugins/jobtypes/commonprivate.properties'))
         self.configure(env)
 
     def stop(self, env):
-        Execute('cd {0} && bin/azkaban-web-shutdown.sh'.format(AZKABAN_WEB_HOME))
+        Execute('cd {0} && (bin/azkaban-web-shutdown.sh || echo 1 > /dev/null)'.format(AZKABAN_WEB_HOME))
 
     def start(self, env):
         self.configure(env)
@@ -96,24 +86,22 @@ class WebServer(Script):
     
     def is_init_azkaban_schema(self, env):
         from params import azkaban_db
-        #db = MySQLdb.connect("n3.hj.gbase","azkaban","azkaban","azkaban" )
+        import MySQLdb
         db = MySQLdb.connect(azkaban_db['mysql.host'],azkaban_db['mysql.user'],azkaban_db['mysql.password'],azkaban_db['mysql.database'])
         cursor = db.cursor()
         
-        query_sql = "SELECT count(*) FROM information_schema.tables WHERE table_schema = {0} AND table_name = executors".format(azkaban_db['mysql.database'])
-        #query_sql = "select * from azkaban.executors"
-        logger.info("query sql : {0}".format(query_sql))
+        query_sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = '{0}' AND table_name = 'executors'".format(azkaban_db['mysql.database'])
+        Logger.info("query sql : {0}".format(query_sql))
+        results = []
         try:
            cursor.execute(query_sql)
            results = cursor.fetchall()
-           print executor_status
         except:
-           print "Error: unable to fecth data"
+           Logger.error("Error: unable to fecth data")
         
         db.close()
         
         return len(results) > 0
-    
     
 if __name__ == '__main__':
     WebServer().execute()

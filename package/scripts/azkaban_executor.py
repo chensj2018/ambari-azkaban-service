@@ -29,7 +29,7 @@ class ExecutorServer(Script):
         self.configure(env)
 
     def stop(self, env):
-        Execute('cd {0} && bin/azkaban-executor-shutdown.sh'.format(AZKABAN_EXE_HOME))
+        Execute('cd {0} && (bin/azkaban-executor-shutdown.sh|| echo 1 > /dev/null)'.format(AZKABAN_EXE_HOME))
 
     def start(self, env):
         from params import azkaban_executor_properties
@@ -40,38 +40,10 @@ class ExecutorServer(Script):
         )
 
     def status(self, env):
-        #from params import azkaban_db 
-        #import socket
-        #from mysql_db import check_executor_status
-        #from params import azkaban_executor_properties, log4j_properties, azkaban_db ,mysql_host, config
-        #Logger.info("conifg len: {0}".format(len(config['configurations'])))
-        #Logger.info("conifg-azkaban-db len: {0}".format(len(config['configurations']['azkaban-db'])))
-        #for key, value in azkaban_db.iteritems():
-        #    Logger.info("key: {0},value :{1}".format(key,value))
-        #Logger.info("mysql host : {0}".format(mysql_host))
-        #for key, value in azkaban_db.iteritems():
-        #    Logger.info("key: {0},value :{1}".format(key,value))
-        #hostname = socket.getfqdn(socket.gethostname()) 
-        #check_executor_status(hostname)
         try:
-            #from mysql_db import azkaban_executor_status
-            #azkaban_executor_status(azkaban_db['mysql.host'],azkaban_db['mysql.user'],azkaban_db['mysql.password'],azkaban_db['mysql.database'])
-            #azkaban_executor_self_status("n3.hj.gbase","azkaban","azkaban","azkaban")
-            
             Execute(
-                'export AZ_CNT=`ps -ef |grep -v grep |grep azkaban-exec-server | wc -l` && `if [ $AZ_CNT -ne 0 ];then exit 0;else exit 3;fi `'
+                'export AZ_CNT=`ps -ef |grep -v grep |grep AzkabanExecutorServer | wc -l` && `if [ $AZ_CNT -ne 0 ];then exit 0;else exit 3;fi `'
            )
-            #Execute('echo select active from azkaban.executors where host=\'`hostname -f`\' limit 1 >/tmp/az_executor_status.sql')
-            # Execute(
-            # 'export AZ_EXECUTOR_STATUS = `cat /tmp/az_executor_status.sql| mysql -h{0} -P{1} -D{2} -u{3} -p{4} ` && \
-            # `if [ $AZ_EXECUTOR_STATUS -ne 0 ];then exit 0;else exit 4;fi `'.format(
-                # azkaban_db['mysql.host'],
-                # azkaban_db['mysql.port'],
-                # azkaban_db['mysql.database'],
-                # azkaban_db['mysql.user'],
-                # azkaban_db['mysql.password'],
-                # ) 
-            # )
             
         except ExecutionFailed as ef:
             if ef.code == 3:
@@ -93,7 +65,6 @@ class ExecutorServer(Script):
 
         with open(path.join(AZKABAN_EXE_CONF, 'log4j.properties'), 'w') as f:
             f.write(log4j_properties['content'])
-
 
 if __name__ == '__main__':
     ExecutorServer().execute()

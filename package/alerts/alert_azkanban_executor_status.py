@@ -58,13 +58,12 @@ def execute(configurations={}, parameters={}, host_name=None):
   parameters (dictionary): a mapping of script parameter key to value
   host_name (string): the name of this host where the alert is running
   """
-  logger.info("configurations : {0},{1}".format(configurations[AZ_EXECUTOR_MYSQL_HOSTNAME],configurations[AZ_EXECUTOR_MYSQL_PORT]))
  
   if configurations is None:
     return (('UNKNOWN', ['There were no configurations supplied to the script.']))
 
   if not AZ_EXECUTOR_MYSQL_HOSTNAME in configurations:
-    return (('UNKNOWN', ['Hive metastore uris were not supplied to the script.']))
+    return (('UNKNOWN', ['executor mysql hostname were not supplied to the script.']))
   
   hostname = configurations[AZ_EXECUTOR_MYSQL_HOSTNAME]
   user = configurations[AZ_EXECUTOR_MYSQL_USER]
@@ -77,7 +76,7 @@ def execute(configurations={}, parameters={}, host_name=None):
   result_code = None
   label = ""
   try:
-    if get_executor_status(hostname,user,pwd,dbname,self_hostname)==1:
+    if get_executor_status(hostname,user,pwd,dbname,self_hostname):
       result_code = 'OK'
     else:
       result_code = 'CRITICAL'
@@ -88,30 +87,20 @@ def execute(configurations={}, parameters={}, host_name=None):
   return (result_code, [label])
 
 def get_executor_status(hostname,user,pwd,dbname,self_hostname):
-    #db = MySQLdb.connect("n3.hj.gbase","azkaban","azkaban","azkaban" )
-    db = MySQLdb.connect(hostname,user,pwd,dbname)
-    cursor = db.cursor()
-    
-    query_sql = "select active from azkaban.executors where host=\'{0}\' and active=1".format(self_hostname)
-    #query_sql = "select * from azkaban.executors"
-    logger.info("query sql : {0}".format(query_sql))
-    try:
-       cursor.execute(query_sql)
-       results = cursor.fetchall()
-       executor_status = len(results)
-       print executor_status
-       for row in results:
-          id = row[0]
-          host = row[1]
-          port = row[2]
-          active = row[3]
-          print "id=%d,host=%s,port=%d,active=%d" %\
-                  (id, host, port,active )
-    except:
-       print "Error: unable to fecth data"
-    
-    db.close()
-    return executor_status
+  db = MySQLdb.connect(hostname,user,pwd,dbname)
+  cursor = db.cursor()
+  
+  query_sql = "select active from azkaban.executors where host=\'{0}\' and active=1".format(self_hostname)
+  results = []
+  try:
+     cursor.execute(query_sql)
+     results = cursor.fetchall()
+  except:
+     logger.error("Error: unable to fecth data")
+  
+  db.close()
+  
+  return len(results) > 0
 
 
 
